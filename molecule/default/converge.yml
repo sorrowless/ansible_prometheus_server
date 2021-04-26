@@ -1,0 +1,105 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+
+  vars:
+    # Docker config
+    docker_package_state: absent
+    docker_service_enabled: false
+    docker_service_state: stopped
+    docker_install_compose: false
+    docker_additional_networks:
+      - name: prom_network
+        bridge_name: prom_bridge
+        subnet: 10.10.10.0/24
+        gateway: 10.10.10.1
+        iprange: 10.10.10.128/25
+    # Prometheus server config
+    prometheus_config_dir: /tmp/prom/prometheus
+    prometheus_inventory_group: "prometheus_clients"
+    prometheus_config:
+      global:
+        scrape_interval: 5s
+        evaluation_interval: 5s
+      remote_write:
+        - url: "http://victoriametrics:8428/api/v1/write"
+          queue_config:
+            max_samples_per_send: 10000
+      remote_read: []
+      alerting:
+        alertmanagers:
+          - timeout: 10s
+            path_prefix: /
+            scheme: http
+            static_configs:
+              - targets: ['alertmanager:9093']
+      rule_files:
+        - 'templates/*.yml'
+    prometheus_reload_url: 'http://prometheus_server:9090/-/reload'
+    # Alertmanager config
+    alertmanager_config_dir: /tmp/prom/alertmanager
+    alertmanager_telegram_bots: []
+    # Grok exporter config
+    grok_exporter_config_dir: /var/lib/grok_exporter
+    grok_exporter_patterns_dir: "{{ grok_exporter_config_dir }}/patterns"
+    grok_exporter_configs:
+      - name: auth_access
+        # For config example look at https://github.com/fstab/grok_exporter/blob/master/example/config.yml
+        config:
+          global:
+            config_version: 3
+            retention_check_interval: 53s
+          input:
+            type: file
+            path: /var/log/auth.log
+            readall: false
+          imports:
+            - type: grok_patterns
+              dir: "{{ grok_exporter_patterns_dir }}"
+          grok_patterns: []
+          metrics:
+            - type: counter
+              name: auth_commands
+              help: Total number of auth access log commands splitted by error
+              match: '%{AUTH_LOG}'
+              labels:
+                error: !unsafe '{{.sudo_error}}'
+          server:
+            host: 0.0.0.0
+            port: 9145
+    # Scripts exporter config
+    scripts_exporter_listen_host: 0.0.0.0
+    scripts_exporter_configs:
+      - name: test script
+        filename: "test.sh"
+        script_params: "test"
+        data_format: json
+        name_override: "test_metric"
+
+
+  pre_tasks:
+    - name: Update apt cache.
+      apt: update_cache=true cache_valid_time=600
+      changed_when: false
+      when: ansible_os_family == 'Debian'
+
+    - name: Install needed packages
+      apt:
+        name:
+          - python3-docker
+          - docker-compose
+        state: present
+
+  roles:
+    # - role: sorrowless.docker
+    # - role: sorrowless.prometheus_node_exporter
+    # - role: sorrowless.prometheus_blackbox_exporter
+    # - role: sorrowless.prometheus_domain_exporter
+    # - role: sorrowless.prometheus_grok_exporter
+    # - role: sorrowless.prometheus_mysqld_exporter
+    # - role: sorrowless.prometheus_postgres_exporter
+    # - role: sorrowless.prometheus_scripts_exporter
+    # - role: sorrowless.victoriametrics
+    # - role: sorrowless.prometheus_alertmanager
+    - role: sorrowless.prometheus_server

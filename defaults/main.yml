@@ -1,0 +1,36 @@
+---
+prometheus_docker_network_name: prom_network
+
+prometheus_container_name: prometheus_server
+prometheus_docker_image: "prom/prometheus"
+prometheus_docker_labels:
+  - prometheus
+  - prometheus_server
+prometheus_config_dir: /var/lib/prometheus/
+# Real prometheus config
+prometheus_config:
+  global:
+    scrape_interval: 5s
+    evaluation_interval: 5s
+  remote_write:
+    # - url: "http://victoriametrics:8428/api/v1/write"
+    - url: "http://127.0.0.1:8428/api/v1/write"
+      queue_config:
+        max_samples_per_send: 10000
+  remote_read: []
+  # - url: "http://prometheus_postgresql_adapter:9201/read"
+  alerting:
+    alertmanagers:
+      - timeout: 10s
+        path_prefix: /
+        scheme: http
+        static_configs:
+          # - targets: ['alertmanager:9093']
+          - targets: ['127.0.0.1:9093']
+  rule_files:
+    - 'templates/*.yml'
+
+# Inventory group with prometheus targets hosts
+prometheus_inventory_group: ""
+# Default URL to reload prometheus server
+prometheus_reload_url: 'http://127.0.0.1:9090/-/reload'

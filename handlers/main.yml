@@ -1,0 +1,5 @@
+---
+- name: Reload prometheus
+  uri:
+    url: "{{ prometheus_reload_url }}"
+    method: POST

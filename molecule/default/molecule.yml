@@ -1,0 +1,97 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+lint: |
+  set -e
+  yamllint .
+  ansible-lint
+platforms:
+  - name: instance
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu2004}-ansible:latest"
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/prom/:/tmp/prom/
+    privileged: true
+    pre_build_image: true
+    groups:
+      - prometheus_servers
+      - prometheus_clients
+provisioner:
+  name: ansible
+  playbooks:
+    converge: ${MOLECULE_PLAYBOOK:-converge.yml}
+  inventory:
+    group_vars:
+      all:
+        ansible_python_interpreter: /usr/bin/python3
+    host_vars:
+      instance:
+        prometheus_client_config:
+          - job_name: instance_node_exporter
+            honor_labels: false
+            static_configs:
+              - labels:
+                  scrape_type: "node_exporter"
+                targets:
+                  - "instance:9100"
+          - job_name: "instance_blackbox_exporter"
+            honor_labels: false
+            metrics_path: /probe
+            params:
+              module: [tcp_ports]
+            static_configs:
+              - targets:
+                  - 127.0.0.1:9115
+                  - 127.0.0.1:9116
+            relabel_configs:
+              - source_labels: [__address__]
+                target_label: __param_target
+              - source_labels: [__param_target]
+                target_label: instance
+              - target_label: __address__
+                replacement: instance:9115  # The blackbox exporter's real hostname:port.
+          - job_name: "instance_domain_exporter"
+            honor_labels: false
+            metrics_path: /probe
+            static_configs:
+              - targets:
+                  - sbog.ru
+            relabel_configs:
+              - source_labels: [__address__]
+                target_label: __param_target
+              - source_labels: [__param_target]
+                target_label: domain
+              - target_label: __address__
+                replacement: instance:9222  # The domain exporter's real hostname:port.
+          - job_name: instance_grok_exporter_auth_access
+            honor_labels: false
+            static_configs:
+              - labels:
+                  scrape_type: "grok_exporter"
+                targets:
+                  - "instance:9145"
+          - job_name: instance_mysqld_exporter
+            honor_labels: false
+            static_configs:
+              - labels:
+                  scrape_type: "mysqld_exporter"
+                targets:
+                  - "instance:9104"
+          - job_name: instance_postgres_exporter
+            honor_labels: false
+            static_configs:
+              - labels:
+                  scrape_type: "postgres_exporter"
+                targets:
+                  - "instance:9187"
+          - job_name: instance_scripts_exporter
+            honor_labels: false
+            static_configs:
+              - labels:
+                  scrape_type: "scripts_exporter"
+                targets:
+                  - "instance:9273"

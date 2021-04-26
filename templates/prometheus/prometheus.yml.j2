@@ -1,0 +1,13 @@
+---
+{{ prometheus_config | to_nice_yaml(indent=2) }}
+
+{% if prometheus_inventory_group and groups[prometheus_inventory_group] %}
+scrape_configs:
+{%   for host in groups[prometheus_inventory_group] %}
+{%     if hostvars[host].get('prometheus_client_config', false) %}
+  {{ hostvars[host]['prometheus_client_config'] | to_nice_yaml(indent=2) | indent(width=2) }}
+{%     endif %}
+{%   endfor %}
+{% else %}
+scrape_configs: []
+{% endif %}
