@@ -1,0 +1,22 @@
+---
+groups:
+  - name: Statsd-gunicorn.rules
+    rules:
+      - alert: Requests are too long
+        expr: gunicorn_request_duration{quantile='0.99'} > 1
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Too long requests processing on {{ $labels.dns_hostname }}"
+          summary_resolved: "{{ $labels.dns_hostname }} requests processing seems to be well."
+          description: "Processing time in 99 percentile is {{ .Value }} for {{ $labels.dns_hostname }} for {{ $labels.proj }} gunicorn application."
+      - alert: HTTP 5xx in Gunicorn
+        expr: rate(gunicorn_request_status{status=~'5.*'}[5m]) > 1
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: "We've got HTTP 5xx for gunicorn on {{ $labels.dns_hostname }}"
+          summary_resolved: "{{ $labels.dns_hostname }} requests processing seems to be well."
+          description: "We detected 5xx HTTP error on {{ $labels.dns_hostname }} for {{ $labels.proj }} gunicorn application."
