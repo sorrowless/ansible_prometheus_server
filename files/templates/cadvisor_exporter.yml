@@ -1,0 +1,22 @@
+---
+groups:
+  - name: Cadvisor.rules
+    rules:
+      - alert: ExporterDown
+        expr: up{scrape_type="cadvisor_exporter"} == 0
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.node_name }} cadvisor is down."
+          summary_resolved: "{{ $labels.node_name }} cadvisor is up."
+          description: "Returned value is {{ .Value }} for {{ $labels.node_name }} cadvisor."
+      - alert: ContainerKilled
+        expr: time() - container_last_seen > 60
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.image }} is down on {{ $labels.node_name }}"
+          summary_resolved: "Container {{ $labels.image }} is up on {{ $labels.node_name }}"
+          description: "Container {{ $labels.image }} is down on {{ $labels.node_name }} for more than 60 sec LABELS = {{ $labels }}"
