@@ -29,3 +29,39 @@ groups:
           summary: "BTC parser on node {{ $labels.node_name }} went to failed state"
           summary_resolved: "BTC parser on node {{ $labels.node_name }} is now in working state"
           description: "BTC Node {{ $labels.node_name }} parser check. \n LABELS: {{ $labels }}"
+      - alert: EthParserIsFailed
+        expr: check_eth_parser_parser_check_failed > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ETH parser on node {{ $labels.node_name }} went to failed state"
+          summary_resolved: "ETH parser on node {{ $labels.node_name }} is now in working state"
+          description: "ETH Node {{ $labels.node_name }} parser check. \n LABELS: {{ $labels }}"
+      - alert: EthVersionStale
+        expr: check_eth_version_geth_version_success < 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Geth version on node {{ $labels.node_name }} became stale"
+          summary_resolved: "Geth version on node {{ $labels.node_name }} is now okay"
+          description: "ETH Node {{ $labels.node_name }} geth check. \n LABELS: {{ $labels }}"
+      - alert: EthPendingTransactions
+        expr: check_geth_pending_pending_transactions > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Geth on node {{ $labels.node_name }} has {{ .Value }} pending transactions"
+          summary_resolved: "Geth on node {{ $labels.node_name }} does not have pending transactions"
+          description: "ETH Node {{ $labels.node_name }} geth check. \n LABELS: {{ $labels }}"
+      - alert: EthOutOfSync
+        expr: check_geth_sync_ethscan_blocknumber - check_geth_sync_local_blocknumber > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Eth node is out of sync ({{ $labels.node_name }}) for more than 10 blocks"
+          summary_resolved: "Eth node {{ $labels.node_name }} is fully synced"
+          description: "Eth node {{ $labels.node_name }} is out of sync\n LABELS: {{ $labels }}"
