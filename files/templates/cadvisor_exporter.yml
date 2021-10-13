@@ -3,8 +3,8 @@ groups:
   - name: cadvisor.rules
     rules:
       - alert: ContainerIsDown
-        expr: floor(time() - max(max_over_time(container_last_seen{name!~"^$|^runner-.*"}[24h])) by (name)) > 20
-        for: 10s
+        expr: floor(time() - max by(name, dns_hostname) (max_over_time(container_last_seen{name!~"^$|^runner-.*"}[1d]))) > 30
+        for: 60s
         labels:
           severity: critical
         annotations:
